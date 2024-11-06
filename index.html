@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Excel File</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <input id="input" type="number" value="0"/><br>
+    <input type="file" id="fileInput" />
+    <br /><hr><br />
+    <select id="selector">
+        <option value="all" selected>顯示全部 ALL</option>
+    </select>
+    </select>
+    <br /><br />
+    <table id="excelData" border="1">
+        <thead>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let options = [];
+        let jsonData = [];
+        let header = 0;
+        let rowheader = 0;
+        document.getElementById('fileInput').addEventListener('change', handleFile, false);
+
+        function handleFile(e) {
+            options = [];
+            jsonData = [];
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0]; // Get the first sheet
+                const worksheet = workbook.Sheets[sheetName];
+                jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }); // Keep empty cells
+                document.getElementById('excelData').getElementsByTagName('tbody')[0];
+                let th = document.getElementById('excelData').getElementsByTagName('thead')[0];
+                th.innerHTML = ""; // Clear existing data
+                th.insertRow(0);
+                for (let h = 0; h < jsonData.length; h++) {
+                    let r = jsonData[h].join().match(/[^,]/g);// Assume the first non-empty row is the header
+                    if (r) {
+                        header = h;
+                        for (let i = 0; i < jsonData[h].length; i++) {
+                            const newCell = th.rows[0].insertCell(i); // Insert a new cell
+                            newCell.textContent = jsonData[h][i]; // Populate the cell
+                        }
+                        break;
+                    }
+                }
+                displayData();
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayData() {
+            let x = document.getElementById("selector");
+            let selected = document.getElementById("selector").value;
+            options = [];
+            while (x.options.length > 1) {
+                x.remove(1); // Always remove the second option (index 1)
+            }
+            const tableBody = document.getElementById('excelData').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ""; // Clear existing data
+            rowheader = document.getElementById('input').value;
+
+            // Loop through each row using numeric iterators
+            for (let i = header+1; i < jsonData.length; i++) {
+                const newRow = tableBody.insertRow(tableBody.childElementCount); // Insert a new row at index i
+
+                // Loop through each cell in the current row
+                for (let j = 0; j < jsonData[i].length; j++) {
+                    const newCell = newRow.insertCell(j); // Insert a new cell at index j
+                    newCell.textContent = jsonData[i][j]; // Populate the cell
+                    if (i > header && j >= rowheader && !options.includes(jsonData[i][j]) && String(jsonData[i][j]).trim() != "") {
+                        options.push(jsonData[i][j]);
+                        var option = document.createElement("option");
+                        option.value = jsonData[i][j];
+                        option.text = jsonData[i][j];
+                        if(selected == jsonData[i][j]){
+                            option.selected = true;
+                        }
+                        x.add(option);
+                    }
+                }
+            }
+        }
+
+        document.getElementById('selector').addEventListener('change', filter, false);
+        document.getElementById('input').addEventListener('change', filter, false);
+        function filter() {
+            let selected = document.getElementById("selector").value;
+            const tableBody = document.getElementById('excelData').getElementsByTagName('tbody')[0];
+            displayData();
+            tableBody.innerHTML = ""; // Clear existing data
+            if (selected == "all") {
+                displayData();
+                return;
+            }
+            for (let i = header+1; i < jsonData.length; i++) {
+                const newRow = tableBody.insertRow(tableBody.childElementCounti); // Insert a new row
+                let eq = false;
+                // Loop through each cell in the current row
+                for (let j = 0; j < jsonData[i].length; j++) {
+                    const newCell = newRow.insertCell(j); // Insert a new cell at index j
+
+                    if (i > header && j >= rowheader) {
+                        if (jsonData[i][j] == selected) {
+                            newCell.textContent = jsonData[i][j]; // Populate the cell
+                            eq = true;
+                        }
+                        else {
+                            newCell.textContent = ""; // Populate the cell
+                        }
+                    }
+                    else {
+                        newCell.textContent = jsonData[i][j]; // Populate the cell
+                    }
+                }
+                if (!eq) {
+                    newRow.style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
